@@ -1,10 +1,10 @@
-from ucollections import deque
+from collections import deque
 
 
 class CircularBuffer(object):
     ''' Very simple implementation of a circular buffer based on deque '''
     def __init__(self, max_size):
-        self.data = deque((), max_size, True)
+        self.data = deque((), max_size)
         self.max_size = max_size
 
     def __len__(self):
@@ -25,7 +25,7 @@ class CircularBuffer(object):
         return self.data.popleft()
 
     def clear(self):
-        self.data = deque((), self.max_size, True)
+        self.data = deque((), self.max_size)
 
     def pop_head(self):
         buffer_size = len(self.data)

@@ -14,10 +14,29 @@
 # This driver aims at giving almost full access to Maxim MAX30102 functionalities.
 #                                                                          n-elia
 
-import uerrno
-from machine import SoftI2C
-from ustruct import unpack
-from utime import sleep_ms, ticks_diff, ticks_ms
+# import uerrno
+# from machine import SoftI2C
+# from ustruct import unpack
+# from utime import sleep_ms, ticks_diff, ticks_ms
+
+import RPi.GPIO as GPIO
+import smbus
+
+# https://docs.micropython.org/en/latest/library/struct.html
+# https://docs.python.org/3/library/struct.html
+from struct import unpack
+
+# https://docs.micropython.org/en/latest/library/time.html
+# https://docs.python.org/3/library/time.html
+from time import sleep
+def sleep_ms(t):
+    sleep(t/1000)
+from time import monotonic
+def ticks_ms():
+    return monotonic()*1000
+def ticks_diff(t1, t2):
+    return t1-t2
+
 
 from circular_buffer import CircularBuffer
 
@@ -168,11 +187,10 @@ class SensorData:
 # Sensor class
 class MAX30102(object):
     def __init__(self,
-                 i2c: SoftI2C,
                  i2c_hex_address=MAX3010X_I2C_ADDRESS,
                  ):
         self.i2c_address = i2c_hex_address
-        self._i2c = i2c
+        self._i2c = smbus.SMBus(1)
         self._active_leds = None
         self._pulse_width = None
         self._multi_led_read_mode = None
@@ -560,11 +578,13 @@ class MAX30102(object):
 
     # Low-level I2C Communication
     def i2c_read_register(self, REGISTER, n_bytes=1):
-        self._i2c.writeto(self.i2c_address, bytearray([REGISTER]))
-        return self._i2c.readfrom(self.i2c_address, n_bytes)
+        # self._i2c.writeto(self.i2c_address, bytearray([REGISTER]))
+        # return self._i2c.readfrom(self.i2c_address, n_bytes)
+        return bytes(self._i2c.read_i2c_block_data(self.i2c_address, REGISTER, n_bytes))
 
     def i2c_set_register(self, REGISTER, VALUE):
-        self._i2c.writeto(self.i2c_address, bytearray([REGISTER, VALUE]))
+        # self._i2c.writeto(self.i2c_address, bytearray([REGISTER, VALUE]))
+        self._i2c.write_i2c_block_data(self.i2c_address, REGISTER, [VALUE])
         return
 
     # Given a register, read it, mask it, and then set the thing
@@ -688,6 +708,7 @@ class MAX30102(object):
             return False
 
     # Check for new data but give up after a certain amount of time
+    # max_time_to_check is in ms
     def safe_check(self, max_time_to_check):
         mark_time = ticks_ms()
         while True:
